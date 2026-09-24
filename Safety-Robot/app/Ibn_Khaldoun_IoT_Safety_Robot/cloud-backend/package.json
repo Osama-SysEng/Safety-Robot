@@ -1,0 +1,13 @@
+{
+  "name": "safety-robot-simulation-backend",
+  "version": "2.0.0",
+  "description": "Simulation-first safety telemetry backend; no field actuation or external notifications",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
