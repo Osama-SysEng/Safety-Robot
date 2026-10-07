@@ -1,2 +1,5 @@
 const { buildApp } = require("./src/app");
-module.exports = buildApp();
+const config = require("./src/config");
+const app = buildApp();
+if (require.main === module) app.listen(config.port, () => console.log(`Safety Robot simulation API listening on ${config.port}`));
+module.exports = app;

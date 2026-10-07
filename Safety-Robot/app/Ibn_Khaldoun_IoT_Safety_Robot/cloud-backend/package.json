@@ -4,8 +4,9 @@
   "description": "Simulation-first safety telemetry backend; no field actuation or external notifications",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "test": "node --test test/*.test.js"
+    "start": "node src/app.js",
+    "test": "node --test test/*.test.js",
+    "dev": "node --watch src/app.js"
   },
   "dependencies": {
     "express": "^4.21.2"
