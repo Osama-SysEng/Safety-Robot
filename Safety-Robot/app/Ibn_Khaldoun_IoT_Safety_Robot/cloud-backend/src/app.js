@@ -1,4 +1,5 @@
 const express = require("express");
+const compression = require("compression");
 const config = require("./config");
 const { createAuditLog } = require("./auditLog");
 const { createIncidentService } = require("./incidentService");
@@ -49,6 +50,19 @@ function rateLimiter({ windowMs, max }) {
   return handler;
 }
 
+function paginate(items, query = {}, runtime) {
+  const maxLimit = Number(runtime.maxPageLimit) || 500;
+  const defaultLimit = Math.min(Number(runtime.defaultPageLimit) || 50, maxLimit);
+  let limit = Number(query.limit);
+  if (!Number.isFinite(limit) || limit <= 0) limit = defaultLimit;
+  limit = Math.min(Math.floor(limit), maxLimit);
+  let offset = Number(query.offset);
+  if (!Number.isFinite(offset) || offset < 0) offset = 0;
+  offset = Math.floor(offset);
+  // Service list() helpers already return newest-first; slice only.
+  return items.slice(offset, offset + limit);
+}
+
 function buildApp(overrides = {}) {
   const app = express(); const audit = createAuditLog();
   const runtime = { ...config, ...overrides };
@@ -59,7 +73,8 @@ function buildApp(overrides = {}) {
   app.use(securityHeaders);
   app.use(corsGuard(runtime.allowedOrigins));
   app.use(limiter);
-  app.use(express.json({ limit: "32kb", strict: true }));
+  app.use(compression({ threshold: 1024 }));
+  app.use(express.json({ limit: runtime.jsonBodyLimit || "32kb", strict: true }));
   // Malformed JSON must return JSON, not the default HTML error page.
   // eslint-disable-next-line no-unused-vars
   app.use((error, _req, res, next) => {
@@ -71,9 +86,9 @@ function buildApp(overrides = {}) {
   });
   app.get("/health", (_req, res) => res.json({ status: "ok", mode: runtime.simulationOnly ? "simulation-only" : "locked" }));
   app.post("/api/v1/telemetry", (req, res) => { try { res.status(202).json(incidents.ingest(req.body)); } catch (error) { audit.append("telemetry_rejected", { reason: error.message }); res.status(400).json({ error: "invalid telemetry" }); } });
-  app.get("/api/v1/incidents", createOperatorGuard(runtime), (_req, res) => res.json(incidents.list()));
-  app.get("/api/v1/audit", createOperatorGuard(runtime), (_req, res) => res.json(audit.list()));
-  app.get("/api/v1/simulation/commands", createOperatorGuard(runtime), (_req, res) => res.json(commands.list()));
+  app.get("/api/v1/incidents", createOperatorGuard(runtime), (req, res) => res.json(paginate(incidents.list(), req.query, runtime)));
+  app.get("/api/v1/audit", createOperatorGuard(runtime), (req, res) => res.json(paginate(audit.list(), req.query, runtime)));
+  app.get("/api/v1/simulation/commands", createOperatorGuard(runtime), (req, res) => res.json(paginate(commands.list(), req.query, runtime)));
   app.post("/api/v1/simulation/commands", createOperatorGuard(runtime), (req, res) => { try { res.status(202).json(commands.request(req.body)); } catch (error) { res.status(409).json({ error: error.message }); } });
   app.use((_req, res) => res.status(404).json({ error: "not found" }));
   // eslint-disable-next-line no-unused-vars
