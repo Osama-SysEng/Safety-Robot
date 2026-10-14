@@ -73,3 +73,5 @@ npm start
 ## الفريق
 - Osama Mohamed Fathy — IT Systems Engineer & Intelligent Automation Architect
 - Built as technical advisor for Ibn Khaldoun Educational Foundation
+
+- Structured JSON logging with request IDs (see cloud-backend/docs/LOGGING.md).
