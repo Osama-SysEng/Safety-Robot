@@ -1,6 +1,7 @@
 const express = require("express");
 const compression = require("compression");
 const config = require("./config");
+const { logger, requestIdMiddleware } = require("./jsonLogger");
 const { createAuditLog } = require("./auditLog");
 const { createIncidentService } = require("./incidentService");
 const { createCommandService } = require("./commandService");
@@ -70,6 +71,7 @@ function buildApp(overrides = {}) {
   const commands = createCommandService({ audit, simulationOnly: runtime.simulationOnly });
   const limiter = rateLimiter({ windowMs: runtime.rateLimitWindowMs, max: runtime.rateLimitMax });
   app.disable("x-powered-by");
+  app.use(requestIdMiddleware);
   app.use(securityHeaders);
   app.use(corsGuard(runtime.allowedOrigins));
   app.use(limiter);
@@ -96,5 +98,5 @@ function buildApp(overrides = {}) {
   return app;
 }
 
-if (require.main === module) buildApp().listen(config.port, () => console.log(`Safety Robot simulation API listening on ${config.port}`));
+if (require.main === module) buildApp().listen(config.port, () => logger.info("server.start", `Safety Robot simulation API listening on ${config.port}`, { port: config.port }));
 module.exports = { buildApp };
